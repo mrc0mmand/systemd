@@ -48,7 +48,12 @@ for phase in "${PHASES[@]}"; do
             $DOCKER_EXEC meson -Dslow-tests=true build
             $DOCKER_EXEC ninja -v -C build
             $DOCKER_EXEC sh -c "printf '#!/bin/sh\necho The test is failing for unknown reason, skipping; exit 77' >/build/build/test-capability"
-            # Run 'make check'
+            $DOCKER_EXEC ninja -C build test
+
+            $DOCKER_EXEC git clean -dxff
+            $DOCKER_EXEC meson -Db_sanitize=address build
+            $DOCKER_EXEC ninja -v -C build
+            $DOCKER_EXEC sh -c "printf '#!/bin/sh\necho The test is failing for unknown reason, skipping; exit 77' >/build/build/test-capability"
             $DOCKER_EXEC ninja -C build test
             ;;
         CLEANUP)
