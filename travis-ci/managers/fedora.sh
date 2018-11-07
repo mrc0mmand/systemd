@@ -9,7 +9,7 @@
 # export CONT_NAME="my-fancy-container"
 # travis-ci/managers/fedora.sh SETUP RUN CLEANUP
 
-PHASES=(${@:-SETUP RUN CLEANUP})
+PHASES=(${@:-SETUP RUN RUN_ASAN CLEANUP})
 FEDORA_RELEASE="${FEDORA_RELEASE:-rawhide}"
 CONT_NAME="${CONT_NAME:-fedora-$FEDORA_RELEASE-$RANDOM}"
 DOCKER_EXEC="${DOCKER_EXEC:-docker exec -it $CONT_NAME}"
@@ -49,7 +49,8 @@ for phase in "${PHASES[@]}"; do
             $DOCKER_EXEC ninja -v -C build
             $DOCKER_EXEC sh -c "printf '#!/bin/sh\necho The test is failing for unknown reason, skipping; exit 77' >/build/build/test-capability"
             $DOCKER_EXEC ninja -C build test
-
+            ;;
+        RUN_ASAN)
             $DOCKER_EXEC git clean -dxff
             $DOCKER_EXEC meson -Db_sanitize=address build
             $DOCKER_EXEC ninja -v -C build
