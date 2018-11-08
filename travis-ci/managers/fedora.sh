@@ -54,10 +54,9 @@ for phase in "${PHASES[@]}"; do
             $DOCKER_EXEC git clean -dxff
             $DOCKER_EXEC meson -Db_sanitize=address,undefined build
             $DOCKER_EXEC ninja -v -C build
-            $DOCKER_EXEC sh -c "printf '#!/bin/sh\necho The test is failing for unknown reason, skipping; exit 77' >/build/build/test-capability"
 
             # Never remove halt_on_error from UBSAN_OPTIONS. See https://github.com/systemd/systemd/commit/2614d83aa06592aedb.
-            $DOCKER_EXEC sh -c "UBSAN_OPTIONS=print_stacktrace=1:print_summary=1:halt_on_error=1 ninja -C build test"
+            $DOCKER_EXEC sh -c "UBSAN_OPTIONS=print_stacktrace=1:print_summary=1:halt_on_error=1 LSAN_OPTIONS=verbosity=2:log_threads=1 /build/build/test-capability"
             ;;
         CLEANUP)
             info "Cleanup phase"

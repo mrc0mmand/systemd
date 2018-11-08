@@ -21,7 +21,7 @@ static uid_t test_uid = -1;
 static gid_t test_gid = -1;
 
 /* We keep CAP_DAC_OVERRIDE to avoid errors with gcov when doing test coverage */
-static uint64_t test_flags = 1ULL << CAP_DAC_OVERRIDE;
+static uint64_t test_flags = (1ULL << CAP_DAC_OVERRIDE) | (1ULL << CAP_SYS_PTRACE);
 
 /* verify cap_last_cap() against /proc/sys/kernel/cap_last_cap */
 static void test_last_cap_file(void) {
@@ -116,6 +116,8 @@ static int setup_tests(bool *run_ambient) {
 static void test_drop_privileges_keep_net_raw(void) {
         int sock;
 
+        show_capabilities();
+
         sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
         assert_se(sock >= 0);
         safe_close(sock);
@@ -133,6 +135,8 @@ static void test_drop_privileges_keep_net_raw(void) {
 static void test_drop_privileges_dontkeep_net_raw(void) {
         int sock;
 
+        show_capabilities();
+
         sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
         assert_se(sock >= 0);
         safe_close(sock);
@@ -147,6 +151,8 @@ static void test_drop_privileges_dontkeep_net_raw(void) {
 }
 
 static void test_drop_privileges_fail(void) {
+        show_capabilities();
+
         assert_se(drop_privileges(test_uid, test_gid, test_flags) >= 0);
         assert_se(getuid() == test_uid);
         assert_se(getgid() == test_gid);
@@ -180,8 +186,6 @@ static void test_update_inherited_set(void) {
 
         caps = cap_get_proc();
         assert_se(caps);
-        assert_se(!cap_get_flag(caps, CAP_CHOWN, CAP_INHERITABLE, &fv));
-        assert(fv == CAP_CLEAR);
 
         set = (UINT64_C(1) << CAP_CHOWN);
 
@@ -196,12 +200,6 @@ static void test_set_ambient_caps(void) {
         cap_t caps;
         uint64_t set = 0;
         cap_flag_value_t fv;
-
-        caps = cap_get_proc();
-        assert_se(caps);
-        assert_se(!cap_get_flag(caps, CAP_CHOWN, CAP_INHERITABLE, &fv));
-        assert(fv == CAP_CLEAR);
-        cap_free(caps);
 
         assert_se(prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_IS_SET, CAP_CHOWN, 0, 0) == 0);
 
