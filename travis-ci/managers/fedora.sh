@@ -56,7 +56,16 @@ for phase in "${PHASES[@]}"; do
             $DOCKER_EXEC sh -c "printf '#!/bin/sh\necho The test is failing under ASan, skipping; exit 77' >/build/build/test-capability"
 
             # Never remove halt_on_error from UBSAN_OPTIONS. See https://github.com/systemd/systemd/commit/2614d83aa06592aedb.
-            $DOCKER_EXEC sh -c "UBSAN_OPTIONS=print_stacktrace=1:print_summary=1:halt_on_error=1 meson test --wrapper /build/travis-ci/tools/wrapper -v --timeout-multiplier=3 -C ./build/ --print-errorlogs"
+            set +e
+            while :; do
+                echo -ne "."
+                $DOCKER_EXEC sh -c "UBSAN_OPTIONS=print_stacktrace=1:print_summary=1:halt_on_error=1 build/test-execute" > log
+                if [ $? -ne 0 ]; then
+                    echo
+                    cat log
+                    exit 1
+                fi
+            done
             ;;
         CLEANUP)
             info "Cleanup phase"
