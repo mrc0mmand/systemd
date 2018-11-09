@@ -15,7 +15,9 @@ CONT_NAME="${CONT_NAME:-fedora-$FEDORA_RELEASE-$RANDOM}"
 DOCKER_EXEC="${DOCKER_EXEC:-docker exec -it $CONT_NAME}"
 DOCKER_RUN="${DOCKER_RUN:-docker run}"
 REPO_ROOT="${REPO_ROOT:-$PWD}"
-ADDITIONAL_DEPS=(dnf-plugins-core python2 iputils hostname libasan python3-pyparsing python3-evdev libubsan)
+ADDITIONAL_DEPS=(dnf-plugins-core python2 iputils hostname libasan python3-pyparsing python3-evdev libubsan
+                 systemd-udev e2fsprogs procps-ng iproute net-tools dhcp-client strace make nc busybox
+                 quota dnsmasq plymouth)
 
 function info() {
     echo -e "\033[33;1m$1\033[0m"
@@ -31,9 +33,11 @@ for phase in "${PHASES[@]}"; do
             # Pull a Docker image and start a new container
             docker pull fedora:$FEDORA_RELEASE
             info "Starting container $CONT_NAME"
-            $DOCKER_RUN -v $REPO_ROOT:/build:rw \
+            $DOCKER_RUN -v $REPO_ROOT:/build:rw -v /dev:/dev \
+                        -v /usr/lib/modules:/usr/lib/modules \
                         -w /build --privileged=true --name $CONT_NAME \
-                        -dit --net=host fedora:$FEDORA_RELEASE /sbin/init
+                        --entrypoint=/sbin/init \
+                        -dit --net=host fedora:$FEDORA_RELEASE
             # Beautiful workaround for Fedora's version of Docker
             sleep 1
             $DOCKER_EXEC dnf makecache
@@ -45,9 +49,25 @@ for phase in "${PHASES[@]}"; do
         RUN)
             info "Run phase"
             # Build systemd
-            $DOCKER_EXEC meson --werror -Dslow-tests=true build
+            $DOCKER_EXEC meson --werror -Dinstall-tests=true -Dslow-tests=true build
             $DOCKER_EXEC ninja -v -C build
+            $DOCKER_EXEC ninja -v -C build install
+            info "Rebooting container $CONT_NAME"
+            docker restart $CONT_NAME
+
             $DOCKER_EXEC ninja -C build test
+
+            set -o pipefail +e
+            for t in test/TEST-??-*; do
+                info "[TASK] $t"
+                $DOCKER_EXEC make -C $t clean setup run clean-again 2>&1 | tee log
+                if [ $? -ne 0 ]; then
+                    cat log
+                    rm -f log
+                    exit 1
+                fi
+            done
+            set +o pipefail -e
             ;;
         RUN_ASAN)
             $DOCKER_EXEC git clean -dxff
