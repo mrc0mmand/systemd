@@ -1,3 +1,4 @@
+dist: xenial
 sudo: required
 services:
     - docker
@@ -16,43 +17,65 @@ stages:
 
 jobs:
     include:
-        - stage: Build & test
-          name: Fedora Rawhide
-          language: bash
-          env:
-              - FEDORA_RELEASE="rawhide"
-              - CONT_NAME="systemd-fedora-$FEDORA_RELEASE"
-              - DOCKER_EXEC="docker exec -ti $CONT_NAME"
-          before_install:
-              - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-              - docker --version
-          install:
-              - $CI_MANAGERS/fedora.sh SETUP
-          script:
-              - set -e
-              # Build systemd
-              - $CI_MANAGERS/fedora.sh RUN
-              - set +e
-          after_script:
-              - $CI_MANAGERS/fedora.sh CLEANUP
+        #- stage: Build & test
+        #  name: Fedora Rawhide
+        #  language: bash
+        #  env:
+        #      - FEDORA_RELEASE="rawhide"
+        #      - CONT_NAME="systemd-fedora-$FEDORA_RELEASE"
+        #      - DOCKER_EXEC="docker exec -ti $CONT_NAME"
+        #  before_install:
+        #      - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+        #      - docker --version
+        #  install:
+        #      - $CI_MANAGERS/fedora.sh SETUP
+        #  script:
+        #      - set -e
+        #      # Build systemd
+        #      - $CI_MANAGERS/fedora.sh RUN
+        #      - set +e
+        #  after_script:
+        #      - $CI_MANAGERS/fedora.sh CLEANUP
 
-        - name: Fedora Rawhide (ASan+UBSan)
+        #- name: Fedora Rawhide (ASan+UBSan)
+        #  language: bash
+        #  env:
+        #      - FEDORA_RELEASE="rawhide"
+        #      - CONT_NAME="systemd-fedora-$FEDORA_RELEASE"
+        #      - DOCKER_EXEC="docker exec -ti $CONT_NAME"
+        #  before_install:
+        #      - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+        #      - docker --version
+        #  install:
+        #      - $CI_MANAGERS/fedora.sh SETUP
+        #  script:
+        #      - set -e
+        #      - $CI_MANAGERS/fedora.sh RUN_ASAN
+        #      - set +e
+        #  after_script:
+        #      - $CI_MANAGERS/fedora.sh CLEANUP
+
+        - name: Ubuntu Trusty
           language: bash
-          env:
-              - FEDORA_RELEASE="rawhide"
-              - CONT_NAME="systemd-fedora-$FEDORA_RELEASE"
-              - DOCKER_EXEC="docker exec -ti $CONT_NAME"
           before_install:
               - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
               - docker --version
           install:
-              - $CI_MANAGERS/fedora.sh SETUP
+              - cp /etc/apt/sources.list sources.list.bak
+              - sudo apt-get -y clean
+              - sudo sed -i'' 's/xenial/bionic/g' /etc/apt/sources.list
+              - cat /etc/apt/sources.list
+              - sudo apt-get -y install meson ninja-build
+              - sudo cp sources.list.bak /etc/apt/sources.list
+              - sudo apt-get -y clean
+              - sudo apt-get -y build-dep systemd
           script:
               - set -e
-              - $CI_MANAGERS/fedora.sh RUN_ASAN
+              - mkdir build
+              - meson build
+              - ninja -C build
+              - ninja -C build test
               - set +e
-          after_script:
-              - $CI_MANAGERS/fedora.sh CLEANUP
 
         - stage: Coverity
           language: bash
