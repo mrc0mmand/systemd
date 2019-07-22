@@ -146,4 +146,8 @@ fuzzers += [
         [['src/fuzz/fuzz-time-util.c'],
          [libshared],
          []],
+
+        [['src/fuzz/fuzz-config-parser.c'],
+         [libshared, libcore],
+         []],
 ]
