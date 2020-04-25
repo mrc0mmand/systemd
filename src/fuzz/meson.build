@@ -146,4 +146,10 @@ fuzzers += [
         [['src/fuzz/fuzz-time-util.c'],
          [libshared],
          []],
+
+        [['src/fuzz/fuzz-home-util.c'],
+         [libshared],
+         [libcrypt],
+         [],
+         [includes, 'src/home/']],
 ]
