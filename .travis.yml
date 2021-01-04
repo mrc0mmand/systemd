@@ -3,8 +3,6 @@
 
 language: bash
 dist: focal
-services:
-  - docker
 
 env:
   global:
@@ -21,17 +19,14 @@ env:
 stages:
   # 'Test' is the default stage (for matrix jobs)
   - name: Test
-    if: type != cron
+    if: type = cron
 
     # Run Coverity periodically instead of for each commit/PR
   - name: Coverity
-    if: type = cron
+    if: type != cron
 
 # Matrix job definition - this is run for each combination of env variables
 # from the env.jobs array above
-before_install:
-  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-  - docker --version
 install:
   - $CI_MANAGERS/debian.sh SETUP
 script:
@@ -52,12 +47,13 @@ jobs:
         - TOOL_ARCHIVE="/var/tmp/cov-analysis-$PLATFORM.tgz"
         - SCAN_URL="https://scan.coverity.com"
         - UPLOAD_URL="https://scan.coverity.com/builds"
-        - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
-        - COVERITY_SCAN_NOTIFICATION_EMAIL="${AUTHOR_EMAIL}"
+        - COVERITY_SCAN_PROJECT_NAME="systemd/systemd"
+        - COVERITY_SCAN_NOTIFICATION_EMAIL="frantisek@sumsal.cz"
         - COVERITY_SCAN_BRANCH_PATTERN="$TRAVIS_BRANCH"
           # Encrypted COVERITY_SCAN_TOKEN env variable
           # Generated using `travis encrypt -r systemd/systemd COVERITY_SCAN_TOKEN=xxxx`
-        - secure: "jKSz+Y1Mv8xMpQHh7g5lzW7E6HQGndFz/vKDJQ1CVShwFoyjV3Zu+MFS3UYKlh1236zL0Z4dvsYFx/b3Hq8nxZWCrWeZs2NdXgy/wh8LZhxwzcGYigp3sIA/cYdP5rDjFJO0MasNkl25/rml8+eZWz+8/xQic98UQHjSco/EOWtssoRcg0J0c4eDM7bGLfIQWE73NNY1Q1UtWjKmx1kekVrM8dPmHXJ9aERka7bmcbJAcKd6vabs6DQ5AfWccUPIn/EsRYqIJTRxJrFYU6XizANZ1a7Vwk/DWHZUEn2msxcZw5BbAMDTMx0TbfrNkKSHMHuvQUCu6KCBAq414i+LgkMfmQ2SWwKiIUsud1kxXX3ZPl9bxDv1HkvVdcniC/EM7lNEEVwm4meOnjuhI2lhOyOjmP3FTSlMHGP7xlK8DS2k9fqL58vn0BaSjwWgd+2+HuL2+nJmxcK1eLGzKqaostFxrk2Xs2vPZkUdV2nWY/asUrcWHml6YlWDn2eP83pfwxHYsMiEHY/rTKvxeVY+iirO/AphoO+eaYu7LvjKZU1Yx5Z4u/SnGWAiCH0yhMis0bWmgi7SCbw+sDd2uya+aoiLIGiB2ChW7hXHXCue/dif6/gLU7b+L8R00pQwnWdvKUPoIJCmZJYCluTeib4jpW+EmARB2+nR8wms2K9FGKM="
+          #        - secure: "jKSz+Y1Mv8xMpQHh7g5lzW7E6HQGndFz/vKDJQ1CVShwFoyjV3Zu+MFS3UYKlh1236zL0Z4dvsYFx/b3Hq8nxZWCrWeZs2NdXgy/wh8LZhxwzcGYigp3sIA/cYdP5rDjFJO0MasNkl25/rml8+eZWz+8/xQic98UQHjSco/EOWtssoRcg0J0c4eDM7bGLfIQWE73NNY1Q1UtWjKmx1kekVrM8dPmHXJ9aERka7bmcbJAcKd6vabs6DQ5AfWccUPIn/EsRYqIJTRxJrFYU6XizANZ1a7Vwk/DWHZUEn2msxcZw5BbAMDTMx0TbfrNkKSHMHuvQUCu6KCBAq414i+LgkMfmQ2SWwKiIUsud1kxXX3ZPl9bxDv1HkvVdcniC/EM7lNEEVwm4meOnjuhI2lhOyOjmP3FTSlMHGP7xlK8DS2k9fqL58vn0BaSjwWgd+2+HuL2+nJmxcK1eLGzKqaostFxrk2Xs2vPZkUdV2nWY/asUrcWHml6YlWDn2eP83pfwxHYsMiEHY/rTKvxeVY+iirO/AphoO+eaYu7LvjKZU1Yx5Z4u/SnGWAiCH0yhMis0bWmgi7SCbw+sDd2uya+aoiLIGiB2ChW7hXHXCue/dif6/gLU7b+L8R00pQwnWdvKUPoIJCmZJYCluTeib4jpW+EmARB2+nR8wms2K9FGKM="
+        - secure: "bxr6Io0rBww+C2P942RfpAM2NJCoTVEyFeKlAHYBDwqeVw6xDX6KqjPY4zZ6/DsQm/SPPKCTUG0AQ17oB7i5LYzzPzDkbppqVIcgS3I0Whvo6G8v78EwsI3B2VBfO+FOLe3cLr1963dEsYJfEvKN4JNbKXpKv0ol86jtRylInyZcO+wQ+sv1kzaqaruZc6rOWLRp/ACSHspGfhqMxLZZ2hCtA4HryHZ7q5k87zbqDxx0UuhCdWxHhDW7ULWDpRUQ7jodd4bqzd+KMoJ0ZqHWNJ94a0SXnUlhdKZqwV4t1nbTyr6mMW02GWGVR9nZVYirEsdMZ1k13Fy9qbnzKTcap0l5L04IPgoJ/EYhsoscdMhRgUvDCPep7mKtIz5SQ4sMQF9CFS2GPl1qMeuVeLcWOEsfXuTN0MQCiMQXPF59EL3u6or56ssbGA54q9PbPmUIX2VhA2DpWhEWfNdTeQsBjNri9XdQ5z6mn9eSnqC/iWHd/yLkvizUbuqB37iIWB92yVuNJMY2hnuxqR79eBG9vnZ8xMwClps09JKGWTozDQ3hTLoRZfg5UcOYXS/JPYRdj60t2CjeTOAvSCN2l8Tts271HGE4I1/BM17efPg2Hb3rUYn4d77VRJwoGFB+CCw1sgPdwmwl0vBJT6UgsBlGUe9aldIt2U0SX8RZ+BSQ5L0="
       install:
         # Use the SETUP phase to install build dependencies
         - $CI_MANAGERS/ubuntu.sh SETUP
@@ -69,5 +65,5 @@ jobs:
         - meson cov-build -Dman=false
           # Run Coverity
         - tools/coverity.sh build
-        - tools/coverity.sh upload
+          #- tools/coverity.sh upload
         - set +e

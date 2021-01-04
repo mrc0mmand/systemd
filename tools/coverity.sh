@@ -38,6 +38,7 @@ fi
 
 # Verify upload is permitted
 AUTH_RES=`curl -s --form project="$COVERITY_SCAN_PROJECT_NAME" --form token="$COVERITY_SCAN_TOKEN" $SCAN_URL/api/upload_permitted`
+echo "AUTH_RES=$AUTH_RES"
 if [ "$AUTH_RES" = "Access denied" ]; then
     echo -e "\033[33;1mCoverity Scan API access denied. Check COVERITY_SCAN_PROJECT_NAME and COVERITY_SCAN_TOKEN.\033[0m"
     exit 1
