@@ -42,7 +42,6 @@ else
     else
         WHEN=`echo $AUTH_RES | jq .next_upload_permitted_at`
         echo -e "\033[33;1mCoverity Scan analysis NOT authorized until $WHEN.\033[0m"
-        exit 1
     fi
 fi
 
@@ -99,7 +98,7 @@ _pack()
 _build()
 {
     echo -e "\033[33;1mRunning Coverity Scan Analysis Tool...\033[0m"
-    local _cov_build_options=""
+    local _cov_build_options="--return-emit-failures --verbose 4"
     #local _cov_build_options="--return-emit-failures 8 --parse-error-threshold 85"
     eval "${COVERITY_SCAN_BUILD_COMMAND_PREPEND}"
     COVERITY_UNSUPPORTED=1 cov-build --dir $RESULTS_DIR $_cov_build_options sh -c "$COVERITY_SCAN_BUILD_COMMAND"
