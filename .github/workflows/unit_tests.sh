@@ -75,6 +75,30 @@ for phase in "${PHASES[@]}"; do
             (set +x; while :; do echo -ne "\n[WATCHDOG] $(date)\n"; sleep 30; done) &
             meson test --timeout-multiplier=3 -C build --print-errorlogs
             ;;
+        RUN_CLANG_MSAN)
+            export CC=clang
+            export CXX=clang++
+
+            meson -Dc_args='-g -O0 -ftrapv -fsanitize=memory -fsanitize-memory-track-origins=2 -Wno-unused-function' \
+                -Db_sanitize=memory --werror -Dtests=true \
+                -Dgcrypt=false \
+                -Dacl=false \
+                -Dselinux=false \
+                -Dapparmor=false \
+                -Dlibiptc=false \
+                -Dseccomp=false \
+                -Dlibidn=false -Dlibidn2=false \
+                -Dxz=false -Dzlib=false -Dlz4=false \
+                -Dmount=false \
+                -Dvalgrind=true \
+                -Db_lundef=false build
+            ninja -C build -v
+
+            export MSAN_OPTIONS=exit_code=42
+            export MSAN_FULLY_INSTRUMENTED=0
+            (set +x; while :; do echo -ne "\n[WATCHDOG] $(date)\n"; sleep 30; done) &
+            meson test --timeout-multiplier=3 -C build --print-errorlogs
+            ;;
         CLEANUP)
             info "Cleanup phase"
             ;;

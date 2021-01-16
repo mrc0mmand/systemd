@@ -5,6 +5,7 @@ on:
 jobs:
   triage:
     runs-on: ubuntu-latest
+    if: github.repository == 'systemd/systemd'
     steps:
     - uses: actions/labeler@main
       with:
