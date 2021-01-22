@@ -1,0 +1,13 @@
+---
+# vi: ts=2 sw=2 et:
+
+dist: focal
+language: bash
+
+env:
+  jobs:
+    - PHASE="WATCHDOG_TRUE"
+    - PHASE="WATCHDOG_FALSE"
+
+script:
+  - sudo -E .github/workflows/unit_tests.sh $PHASE || travis_terminate 1
