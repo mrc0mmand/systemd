@@ -1,0 +1,11 @@
+---
+# vi: tw=2 sw=2 et:
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
