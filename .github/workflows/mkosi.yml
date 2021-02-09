@@ -18,9 +18,6 @@ jobs:
       matrix:
         distro:
           - arch
-          - debian
-          - ubuntu
-          - fedora
 
     steps:
     - uses: actions/checkout@v2
