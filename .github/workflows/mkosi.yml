@@ -18,9 +18,6 @@ jobs:
       matrix:
         distro:
           - arch
-          - debian
-          - ubuntu
-          - fedora
 
     steps:
     - uses: actions/checkout@v2
@@ -31,6 +28,14 @@ jobs:
 
     - name: Symlink
       run: ln -s .mkosi/mkosi.${{ matrix.distro }} mkosi.default
+
+    - name: Enable Arch's testing repository
+      run: sudo sed -i '/\[core\]/i[testing]\n\{server\}\n' /usr/local/lib/python3.8/dist-packages/mkosi/__init__.py
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
 
     - name: Build ${{ matrix.distro }}
       run: sudo python3 -m mkosi --password= --qemu-headless build
