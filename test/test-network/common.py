@@ -9,53 +9,55 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import time
 import unittest
 
+this = sys.modules[__name__]
 
-network_unit_dir = '/run/systemd/network'
-networkd_conf_dropin_dir = '/run/systemd/networkd.conf.d'
-networkd_ci_temp_dir = '/run/networkd-ci'
-udev_rules_dir = '/run/udev/rules.d'
+this.network_unit_dir = '/run/systemd/network'
+this.networkd_conf_dropin_dir = '/run/systemd/networkd.conf.d'
+this.networkd_ci_temp_dir = '/run/networkd-ci'
+this.udev_rules_dir = '/run/udev/rules.d'
 
-dnsmasq_pid_file = '/run/networkd-ci/test-dnsmasq.pid'
-dnsmasq_log_file = '/run/networkd-ci/test-dnsmasq.log'
-dnsmasq_lease_file = '/run/networkd-ci/test-dnsmasq.lease'
+this.dnsmasq_pid_file = '/run/networkd-ci/test-dnsmasq.pid'
+this.dnsmasq_log_file = '/run/networkd-ci/test-dnsmasq.log'
+this.dnsmasq_lease_file = '/run/networkd-ci/test-dnsmasq.lease'
 
-isc_dhcpd_pid_file = '/run/networkd-ci/test-isc-dhcpd.pid'
-isc_dhcpd_lease_file = '/run/networkd-ci/test-isc-dhcpd.lease'
+this.isc_dhcpd_pid_file = '/run/networkd-ci/test-isc-dhcpd.pid'
+this.isc_dhcpd_lease_file = '/run/networkd-ci/test-isc-dhcpd.lease'
 
-systemd_lib_paths = ['/usr/lib/systemd', '/lib/systemd']
-which_paths = ':'.join(systemd_lib_paths + os.getenv('PATH', os.defpath).lstrip(':').split(':'))
+this.systemd_lib_paths = ['/usr/lib/systemd', '/lib/systemd']
+this.which_paths = ':'.join(this.systemd_lib_paths + os.getenv('PATH', os.defpath).lstrip(':').split(':'))
 
-networkd_bin = shutil.which('systemd-networkd', path=which_paths)
-resolved_bin = shutil.which('systemd-resolved', path=which_paths)
-timesyncd_bin = shutil.which('systemd-timesyncd', path=which_paths)
-udevd_bin = shutil.which('systemd-udevd', path=which_paths)
-wait_online_bin = shutil.which('systemd-networkd-wait-online', path=which_paths)
-networkctl_bin = shutil.which('networkctl', path=which_paths)
-resolvectl_bin = shutil.which('resolvectl', path=which_paths)
-timedatectl_bin = shutil.which('timedatectl', path=which_paths)
-udevadm_bin = shutil.which('udevadm', path=which_paths)
+this.networkd_bin = shutil.which('systemd-networkd', path=this.which_paths)
+this.resolved_bin = shutil.which('systemd-resolved', path=this.which_paths)
+this.timesyncd_bin = shutil.which('systemd-timesyncd', path=this.which_paths)
+this.udevd_bin = shutil.which('systemd-udevd', path=this.which_paths)
+this.wait_online_bin = shutil.which('systemd-networkd-wait-online', path=this.which_paths)
+this.networkctl_bin = shutil.which('networkctl', path=this.which_paths)
+this.resolvectl_bin = shutil.which('resolvectl', path=this.which_paths)
+this.timedatectl_bin = shutil.which('timedatectl', path=this.which_paths)
+this.udevadm_bin = shutil.which('udevadm', path=this.which_paths)
 
-networkctl_cmd = []
-resolvectl_cmd = []
-timedatectl_cmd = []
-udevadm_cmd = []
-wait_online_cmd = []
+this.networkctl_cmd = []
+this.resolvectl_cmd = []
+this.timedatectl_cmd = []
+this.udevadm_cmd = []
+this.wait_online_cmd = []
 
-use_valgrind = False
-valgrind_cmd = ''
-enable_debug = True
-env = {}
-wait_online_env = {}
-asan_options = None
-lsan_options = None
-ubsan_options = None
-with_coverage = False
+this.use_valgrind = False
+this.valgrind_cmd = ''
+this.enable_debug = True
+this.env = {}
+this.wait_online_env = {}
+this.asan_options = None
+this.lsan_options = None
+this.ubsan_options = None
+this.with_coverage = False
 
-active_units = []
-protected_links = {
+this.active_units = []
+this.protected_links = {
     'erspan0',
     'gre0',
     'gretap0',
@@ -69,10 +71,10 @@ protected_links = {
     'sit0',
     'tunl0',
 }
-saved_routes = None
-saved_ipv4_rules = None
-saved_ipv6_rules = None
-saved_timezone = None
+this.saved_routes = None
+this.saved_ipv4_rules = None
+this.saved_ipv6_rules = None
+this.saved_timezone = None
 
 def rm_f(path):
     if os.path.exists(path):
@@ -243,7 +245,7 @@ def compare_kernel_version(min_kernel_version):
     return version.parse(kver) >= version.parse(min_kernel_version)
 
 def udev_reload():
-    check_output(*udevadm_cmd, 'control', '--reload')
+    check_output(*this.udevadm_cmd, 'control', '--reload')
 
 def copy_network_unit(*units, copy_dropins=True):
     """
@@ -257,19 +259,20 @@ def copy_network_unit(*units, copy_dropins=True):
     When a drop-in file is specified, its unit file is also copied in automatically.
     """
     has_link = False
-    mkdir_p(network_unit_dir)
+    mkdir_p(this.network_unit_dir)
     for unit in units:
-        if copy_dropins and os.path.exists(os.path.join(networkd_ci_temp_dir, unit + '.d')):
-            cp_r(os.path.join(networkd_ci_temp_dir, unit + '.d'), os.path.join(network_unit_dir, unit + '.d'))
+        if copy_dropins and os.path.exists(os.path.join(this.networkd_ci_temp_dir, unit + '.d')):
+            cp_r(os.path.join(this.networkd_ci_temp_dir, unit + '.d'),
+                 os.path.join(this.network_unit_dir, unit + '.d'))
 
         if unit.endswith('.conf'):
             dropin = unit
             unit = os.path.dirname(dropin).rstrip('.d')
-            dropindir = os.path.join(network_unit_dir, unit + '.d')
+            dropindir = os.path.join(this.network_unit_dir, unit + '.d')
             mkdir_p(dropindir)
-            cp(os.path.join(networkd_ci_temp_dir, dropin), dropindir)
+            cp(os.path.join(this.networkd_ci_temp_dir, dropin), dropindir)
 
-        cp(os.path.join(networkd_ci_temp_dir, unit), network_unit_dir)
+        cp(os.path.join(this.networkd_ci_temp_dir, unit), this.network_unit_dir)
 
         if unit.endswith('.link'):
             has_link = True
@@ -285,8 +288,8 @@ def remove_network_unit(*units):
     """
     has_link = False
     for unit in units:
-        rm_f(os.path.join(network_unit_dir, unit))
-        rm_rf(os.path.join(network_unit_dir, unit + '.d'))
+        rm_f(os.path.join(this.network_unit_dir, unit))
+        rm_rf(os.path.join(this.network_unit_dir, unit + '.d'))
 
         if unit.endswith('.link') or unit.endswith('.link.d'):
             has_link = True
@@ -296,44 +299,44 @@ def remove_network_unit(*units):
 
 def clear_network_units():
     has_link = False
-    if os.path.exists(network_unit_dir):
-        units = os.listdir(network_unit_dir)
+    if os.path.exists(this.network_unit_dir):
+        units = os.listdir(this.network_unit_dir)
         for unit in units:
             if unit.endswith('.link') or unit.endswith('.link.d'):
                 has_link = True
 
-    rm_rf(network_unit_dir)
+    rm_rf(this.network_unit_dir)
 
     if has_link:
         udev_reload()
 
 def copy_networkd_conf_dropin(*dropins):
     """Copy networkd.conf dropin files into the testbed."""
-    mkdir_p(networkd_conf_dropin_dir)
+    mkdir_p(this.networkd_conf_dropin_dir)
     for dropin in dropins:
-        cp(os.path.join(networkd_ci_temp_dir, dropin), networkd_conf_dropin_dir)
+        cp(os.path.join(this.networkd_ci_temp_dir, dropin), this.networkd_conf_dropin_dir)
 
 def remove_networkd_conf_dropin(*dropins):
     """Remove previously copied networkd.conf dropin files from the testbed."""
     for dropin in dropins:
-        rm_f(os.path.join(networkd_conf_dropin_dir, dropin))
+        rm_f(os.path.join(this.networkd_conf_dropin_dir, dropin))
 
 def clear_networkd_conf_dropins():
-    rm_rf(networkd_conf_dropin_dir)
+    rm_rf(this.networkd_conf_dropin_dir)
 
 def copy_udev_rule(*rules):
     """Copy udev rules"""
-    mkdir_p(udev_rules_dir)
+    mkdir_p(this.udev_rules_dir)
     for rule in rules:
-        cp(os.path.join(networkd_ci_temp_dir, rule), udev_rules_dir)
+        cp(os.path.join(this.networkd_ci_temp_dir, rule), this.udev_rules_dir)
 
 def remove_udev_rule(*rules):
     """Remove previously copied udev rules"""
     for rule in rules:
-        rm_f(os.path.join(udev_rules_dir, rule))
+        rm_f(os.path.join(this.udev_rules_dir, rule))
 
 def clear_udev_rules():
-    rm_rf(udev_rules_dir)
+    rm_rf(this.udev_rules_dir)
 
 def save_active_units():
     for u in ['systemd-networkd.socket', 'systemd-networkd.service',
@@ -341,12 +344,12 @@ def save_active_units():
               'firewalld.service']:
         if call(f'systemctl is-active --quiet {u}') == 0:
             call(f'systemctl stop {u}')
-            active_units.append(u)
+            this.active_units.append(u)
 
 def restore_active_units():
-    if 'systemd-networkd.socket' in active_units:
+    if 'systemd-networkd.socket' in this.active_units:
         call('systemctl stop systemd-networkd.socket systemd-networkd.service')
-    for u in active_units:
+    for u in this.active_units:
         call(f'systemctl restart {u}')
 
 def create_unit_dropin(unit, contents):
@@ -358,31 +361,31 @@ def create_service_dropin(service, command, reload_command=None, additional_sett
     drop_in = [
         '[Service]',
         'ExecStart=',
-        f'ExecStart=!!{valgrind_cmd}{command}',
+        f'ExecStart=!!{this.valgrind_cmd}{command}',
     ]
     if reload_command:
         drop_in += [
             'ExecReload=',
-            f'ExecReload={valgrind_cmd}{reload_command}',
+            f'ExecReload={this.valgrind_cmd}{reload_command}',
         ]
-    if enable_debug:
+    if this.enable_debug:
         drop_in += ['Environment=SYSTEMD_LOG_LEVEL=debug']
-    if asan_options:
-        drop_in += [f'Environment=ASAN_OPTIONS="{asan_options}"']
-    if lsan_options:
-        drop_in += [f'Environment=LSAN_OPTIONS="{lsan_options}"']
-    if ubsan_options:
-        drop_in += [f'Environment=UBSAN_OPTIONS="{ubsan_options}"']
-    if asan_options or lsan_options or ubsan_options:
+    if this.asan_options:
+        drop_in += [f'Environment=ASAN_OPTIONS="{this.asan_options}"']
+    if this.lsan_options:
+        drop_in += [f'Environment=LSAN_OPTIONS="{this.lsan_options}"']
+    if this.ubsan_options:
+        drop_in += [f'Environment=UBSAN_OPTIONS="{this.ubsan_options}"']
+    if this.asan_options or this.lsan_options or this.ubsan_options:
         drop_in += ['SystemCallFilter=']
-    if use_valgrind or asan_options or lsan_options or ubsan_options:
+    if this.use_valgrind or this.asan_options or this.lsan_options or this.ubsan_options:
         drop_in += ['MemoryDenyWriteExecute=no']
-    if use_valgrind:
+    if this.use_valgrind:
         drop_in += [
             'Environment=SYSTEMD_MEMPOOL=0',
             'PrivateTmp=yes',
         ]
-    if with_coverage:
+    if this.with_coverage:
         drop_in += [
             'ProtectSystem=no',
             'ProtectHome=no',
@@ -400,7 +403,7 @@ def link_resolve(link):
 
 def remove_link(*links, protect=False):
     for link in links:
-        if protect and link in protected_links:
+        if protect and link in this.protected_links:
             continue
         if link_exists(link):
             call(f'ip link del dev {link}')
@@ -409,10 +412,10 @@ def save_existing_links():
     links = os.listdir('/sys/class/net')
     for link in links:
         if link_exists(link):
-            protected_links.add(link)
+            this.protected_links.add(link)
 
     print('### The following links will be protected:')
-    print(', '.join(sorted(list(protected_links))))
+    print(', '.join(sorted(list(this.protected_links))))
 
 def flush_links():
     links = os.listdir('/sys/class/net')
@@ -425,17 +428,15 @@ def flush_nexthops():
     call_quiet('ip nexthop flush')
 
 def save_routes():
-    # pylint: disable=global-statement
-    global saved_routes
-    saved_routes = check_output('ip route show table all')
+    this.saved_routes = check_output('ip route show table all')
     print('### The following routes will be protected:')
-    print(saved_routes)
+    print(this.saved_routes)
 
 def flush_routes():
     have = False
     output = check_output('ip route show table all')
     for line in output.splitlines():
-        if line in saved_routes:
+        if line in this.saved_routes:
             continue
         if 'proto kernel' in line:
             continue
@@ -448,16 +449,14 @@ def flush_routes():
         call(f'ip route del {line}')
 
 def save_routing_policy_rules():
-    # pylint: disable=global-statement
-    global saved_ipv4_rules, saved_ipv6_rules
     def save(ipv):
         output = check_output(f'ip -{ipv} rule show')
         print(f'### The following IPv{ipv} routing policy rules will be protected:')
         print(output)
         return output
 
-    saved_ipv4_rules = save(4)
-    saved_ipv6_rules = save(6)
+    this.saved_ipv4_rules = save(4)
+    this.saved_ipv6_rules = save(6)
 
 def flush_routing_policy_rules():
     def flush(ipv, saved_rules):
@@ -474,8 +473,8 @@ def flush_routing_policy_rules():
             priority = words[0].rstrip(':')
             call(f'ip -{ipv} rule del priority {priority} ' + ' '.join(words[1:]))
 
-    flush(4, saved_ipv4_rules)
-    flush(6, saved_ipv6_rules)
+    flush(4, this.saved_ipv4_rules)
+    flush(6, this.saved_ipv6_rules)
 
 def flush_fou_ports():
     ret = run('ip fou show')
@@ -508,16 +507,14 @@ def flush_l2tp_tunnels():
             print(f'Cannot remove L2TP tunnel {tid}, ignoring.')
 
 def save_timezone():
-    # pylint: disable=global-statement
-    global saved_timezone
-    r = run(*timedatectl_cmd, 'show', '--value', '--property', 'Timezone', env=env)
+    r = run(*this.timedatectl_cmd, 'show', '--value', '--property', 'Timezone', env=this.env)
     if r.returncode == 0:
-        saved_timezone = r.stdout.rstrip()
-        print(f'### Saved timezone: {saved_timezone}')
+        this.saved_timezone = r.stdout.rstrip()
+        print(f'### Saved timezone: {this.saved_timezone}')
 
 def restore_timezone():
-    if saved_timezone:
-        call(*timedatectl_cmd, 'set-timezone', f'{saved_timezone}', env=env)
+    if this.saved_timezone:
+        call(*this.timedatectl_cmd, 'set-timezone', f'{this.saved_timezone}', env=this.env)
 
 def read_link_attr(*args):
     with open(os.path.join('/sys/class/net', *args), encoding='utf-8') as f:
@@ -542,14 +539,14 @@ def read_ipv4_sysctl_attr(link, attribute):
 def start_dnsmasq(*additional_options, interface='veth-peer', lease_time='2m', ipv4_range='192.168.5.10,192.168.5.200', ipv4_router='192.168.5.1', ipv6_range='2600::10,2600::20'):
     command = (
         'dnsmasq',
-        f'--log-facility={dnsmasq_log_file}',
+        f'--log-facility={this.dnsmasq_log_file}',
         '--log-queries=extra',
         '--log-dhcp',
-        f'--pid-file={dnsmasq_pid_file}',
+        f'--pid-file={this.dnsmasq_pid_file}',
         '--conf-file=/dev/null',
         '--bind-interfaces',
         f'--interface={interface}',
-        f'--dhcp-leasefile={dnsmasq_lease_file}',
+        f'--dhcp-leasefile={this.dnsmasq_lease_file}',
         '--enable-ra',
         f'--dhcp-range={ipv6_range},{lease_time}',
         f'--dhcp-range={ipv4_range},{lease_time}',
@@ -578,23 +575,23 @@ def stop_by_pid_file(pid_file):
     os.remove(pid_file)
 
 def stop_dnsmasq():
-    stop_by_pid_file(dnsmasq_pid_file)
-    rm_f(dnsmasq_lease_file)
-    rm_f(dnsmasq_log_file)
+    stop_by_pid_file(this.dnsmasq_pid_file)
+    rm_f(this.dnsmasq_lease_file)
+    rm_f(this.dnsmasq_log_file)
 
 def read_dnsmasq_log_file():
-    with open(dnsmasq_log_file, encoding='utf-8') as f:
+    with open(this.dnsmasq_log_file, encoding='utf-8') as f:
         return f.read()
 
 def start_isc_dhcpd(conf_file, ipv, interface='veth-peer'):
-    conf_file_path = os.path.join(networkd_ci_temp_dir, conf_file)
-    isc_dhcpd_command = f'dhcpd {ipv} -cf {conf_file_path} -lf {isc_dhcpd_lease_file} -pf {isc_dhcpd_pid_file} {interface}'
-    touch(isc_dhcpd_lease_file)
+    conf_file_path = os.path.join(this.networkd_ci_temp_dir, conf_file)
+    isc_dhcpd_command = f'dhcpd {ipv} -cf {conf_file_path} -lf {this.isc_dhcpd_lease_file} -pf {this.isc_dhcpd_pid_file} {interface}'
+    touch(this.isc_dhcpd_lease_file)
     check_output(isc_dhcpd_command)
 
 def stop_isc_dhcpd():
-    stop_by_pid_file(isc_dhcpd_pid_file)
-    rm_f(isc_dhcpd_lease_file)
+    stop_by_pid_file(this.isc_dhcpd_pid_file)
+    rm_f(this.isc_dhcpd_lease_file)
 
 def networkd_invocation_id():
     return check_output('systemctl show --value -p InvocationID systemd-networkd.service')
@@ -626,10 +623,10 @@ def networkd_pid():
     return int(check_output('systemctl show --value -p MainPID systemd-networkd.service'))
 
 def networkctl_reconfigure(*links):
-    check_output(*networkctl_cmd, 'reconfigure', *links, env=env)
+    check_output(*this.networkctl_cmd, 'reconfigure', *links, env=this.env)
 
 def networkctl_reload(sleep_time=1):
-    check_output(*networkctl_cmd, 'reload', env=env)
+    check_output(*this.networkctl_cmd, 'reload', env=this.env)
     # 'networkctl reload' asynchronously reconfigure links.
     # Hence, we need to wait for a short time for link to be in configuring state.
     if sleep_time > 0:
@@ -750,7 +747,7 @@ class Utilities():
                 time.sleep(1)
             if not link_exists(link):
                 continue
-            output = check_output(*networkctl_cmd, '-n', '0', 'status', link, env=env)
+            output = check_output(*this.networkctl_cmd, '-n', '0', 'status', link, env=this.env)
             if re.search(rf'(?m)^\s*State:\s+{operstate}\s+\({setup_state}\)\s*$', output):
                 return True
 
@@ -781,7 +778,7 @@ class Utilities():
         This returns if the links reached the requested operstate/setup_state; otherwise it
         raises CalledProcessError or fails test assertion.
         """
-        args = wait_online_cmd + [f'--timeout={timeout}'] + [f'--interface={link}' for link in links_with_operstate] + [f'--ignore={link}' for link in protected_links]
+        args = this.wait_online_cmd + [f'--timeout={timeout}'] + [f'--interface={link}' for link in links_with_operstate] + [f'--ignore={link}' for link in this.protected_links]
         if bool_any:
             args += ['--any']
         if ipv4:
@@ -789,13 +786,13 @@ class Utilities():
         if ipv6:
             args += ['--ipv6']
         try:
-            check_output(*args, env=wait_online_env)
+            check_output(*args, env=this.wait_online_env)
         except subprocess.CalledProcessError:
             # show detailed status on failure
             for link in links_with_operstate:
                 name = link.split(':')[0]
                 if link_exists(name):
-                    call(*networkctl_cmd, '-n', '0', 'status', name, env=env)
+                    call(*this.networkctl_cmd, '-n', '0', 'status', name, env=this.env)
             raise
         if not bool_any and setup_state:
             for link in links_with_operstate:
