@@ -8087,8 +8087,9 @@ void exec_params_serialized_clear(ExecParameters *p) {
         if (!p)
                 return;
 
-        for (size_t i = 0; i < p->n_socket_fds + p->n_storage_fds; i++)
-                p->fds[i] = safe_close(p->fds[i]);
+        if (p->fds)
+                for (size_t i = 0; i < p->n_socket_fds + p->n_storage_fds; i++)
+                        p->fds[i] = safe_close(p->fds[i]);
 
         p->cgroup_path = mfree((void *)p->cgroup_path);
 

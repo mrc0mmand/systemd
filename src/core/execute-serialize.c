@@ -1458,7 +1458,7 @@ static int exec_parameters_serialize(const ExecParameters *p,
                         return r;
         }
 
-        if (p->n_socket_fds + p->n_storage_fds > 0) {
+        if (p->n_socket_fds + p->n_storage_fds > 0 && p->fds) {
                 _cleanup_free_ char *serialized_fds = NULL;
 
                 for (size_t i = 0; i < p->n_socket_fds + p->n_storage_fds; ++i) {
@@ -1831,6 +1831,11 @@ static int exec_parameters_deserialize(ExecParameters *p,
                                 return r;
                 }
         }
+
+        /* Bail out if we got exec-parameters-n-{socket/storage}-fds= but no corresponding
+         * exec-parameters-fds= */
+        if (p->n_socket_fds + p->n_storage_fds > 0 && !p->fds)
+                return -EINVAL;
 
         return 0;
 }
