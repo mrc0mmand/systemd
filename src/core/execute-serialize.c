@@ -1391,7 +1391,9 @@ static int exec_runtime_deserialize(ExecRuntime *rt,
                                         n_fds_array,
                                         &rt->dynamic_creds->group);
                 else if ((val = startswith(l, "exec-runtime-dynamic-creds-groupcopy=yes"))) {
-                        assert(rt->dynamic_creds->user);
+                        if (!rt->dynamic_creds->user)
+                                continue;
+
                         rt->dynamic_creds->group = dynamic_user_ref(rt->dynamic_creds->user);
                 } else if ((val = startswith(l, "exec-runtime-ephemeral-copy="))) {
                         r = free_and_strdup(&rt->ephemeral_copy, val);
@@ -3052,6 +3054,8 @@ static int exec_context_deserialize(ExecContext *c, FILE *f) {
                                 return r;
                         if (r == 0)
                                 continue;
+                        if (!val)
+                                return -EINVAL;
 
                         dt = exec_directory_type_from_string(type);
                         if (dt < 0)
@@ -3142,6 +3146,8 @@ static int exec_context_deserialize(ExecContext *c, FILE *f) {
                                 return r;
                         if (r == 0)
                                 continue;
+                        if (!val)
+                                return -EINVAL;
 
                         type = rlimit_from_string(limit);
                         if (type < 0)
