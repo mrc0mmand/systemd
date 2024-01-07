@@ -540,6 +540,27 @@ grep -qF "fd00:dead:beef:cafe::123" "$RUN_OUT"
 #run dig +dnssec this.does.not.exist.untrusted.test
 #grep -qF "status: NXDOMAIN" "$RUN_OUT"
 
+
+: "--- ZONE: invalid.test (borked zone that returns SERVFAIL + 'Invalid Data' EDE) ---"
+# Nuke the zone first
+knotc zone-purge --force invalid.test.
+# Also, freeze the zone so knot doesn't try to re-sign the void we just created
+knotc zone-freeze invalid.test.
+knotc zone-status invalid.test.
+run dig @ns1.unsigned.test +edns invalid.test
+grep -qF "status: SERVFAIL" "$RUN_OUT"
+grep -qF "EDE: 24 (Invalid Data)" "$RUN_OUT"
+# With DNSSEC on we should get errors about missing signatures
+(! run resolvectl --cache=no query invalid.test)
+grep -qE "^invalid.test.+: no-signature" "$RUN_OUT"
+# Without DNSSEC we should get SERVFAIL (the EDE stuff visible only in resolved debug
+# log, maybe a potential FIXME)
+resolvectl dnssec dns0 no
+(! run resolvectl --cache=no query invalid.test)
+grep -qE "^invalid.test.+ SERVFAIL" "$RUN_OUT"
+resolvectl dnssec dns0 yes
+
+
 ### Test resolvectl show-cache
 run resolvectl show-cache
 run resolvectl show-cache --json=short
