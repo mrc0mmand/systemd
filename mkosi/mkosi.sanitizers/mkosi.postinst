@@ -56,6 +56,7 @@ wrap=(
     dbus-broker-launch
     dbus-daemon
     delv
+    dfuzzer
     dhcpd
     dig
     dnf
@@ -70,6 +71,7 @@ wrap=(
     groups
     id
     integritysetup
+    iscsiadm
     iscsid
     keymgr
     knotc
@@ -83,8 +85,11 @@ wrap=(
     lvm
     mdadm
     mkfs.btrfs
+    mkfs.erofs
+    mkfs.ext4
     mksquashfs
     mount
+    mountpoint
     multipath
     multipathd
     nvme
@@ -98,8 +103,13 @@ wrap=(
     stat
     stress-ng
     su
+    swapoff
+    swapon
     tar
     tgtd
+    tpm2_dictionarylockout
+    tpm2_pcrextend
+    tpm2_pcrread
     umount
     unix_chkpwd
     useradd
